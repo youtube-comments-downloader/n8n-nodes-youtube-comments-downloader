@@ -30,13 +30,17 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "strict": true,
-    "credentials": [],
+    "credentials": [
+      "dist/credentials/YoutubeCommentsDownloaderApi.credentials.js"
+    ],
     "nodes": [
-      "dist/nodes/Example/Example.node.js"
+      "dist/nodes/Example/Example.node.js",
+      "dist/nodes/YoutubeCommentsDownloader/YoutubeCommentsDownloader.node.js"
     ]
   },
   "devDependencies": {
     "@n8n/node-cli": "*",
+    "@types/node": "^24.10.1",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
     "release-it": "^19.0.4",
