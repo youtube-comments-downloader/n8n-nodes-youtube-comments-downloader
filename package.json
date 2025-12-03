@@ -48,5 +48,8 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
+  },
+  "dependencies": {
+    "p-limit": "^7.2.0"
   }
 }

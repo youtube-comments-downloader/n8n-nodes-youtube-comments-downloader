@@ -1,319 +1,312 @@
-import {
-	IDataObject,
-	IExecuteFunctions,
-	INodeExecutionData,
-	INodeType,
-	INodeTypeDescription,
-} from 'n8n-workflow';
+import pLimit from "p-limit"
+import { sleep } from "n8n-workflow"
+
+import type {
+  IDataObject,
+  IExecuteFunctions,
+  INodeExecutionData,
+  INodeType,
+  INodeTypeDescription,
+} from "n8n-workflow"
 
 export class YoutubeCommentsDownloader implements INodeType {
-	description: INodeTypeDescription = {
-		displayName: 'YouTube Comments Downloader',
-		name: 'youtubeCommentsDownloader',
-		icon: 'file:youtubeCommentsDownloader.svg',
-		group: ['transform'],
-		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Download comments from YouTube videos, shorts, channels, etc.',
-		defaults: {
-			name: 'YouTube Comments Downloader',
-		},
-		inputs: ['main'],
-		outputs: ['main'],
-		usableAsTool: true,
-		credentials: [
-			{
-				name: 'youtubeCommentsDownloaderApi',
-				required: true,
-			},
-		],
-		properties: [
-			{
-				displayName: 'Resource',
-				name: 'resource',
-				type: 'options',
-				noDataExpression: true,
-				options: [
-					{
-						name: 'Download',
-						value: 'download',
-					},
-				],
-				default: 'download',
-			},
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['download'],
-					},
-				},
-				options: [
-					{
-						name: 'Create',
-						value: 'create',
-						description: 'Create a new download job',
-						action: 'Create a download',
-					},
-					{
-						name: 'Get',
-						value: 'get',
-						description: 'Get a download job status',
-						action: 'Get a download',
-					},
-					{
-						name: 'Get Many',
-						value: 'getAll',
-						description: 'List download jobs',
-						action: 'Get many downloads',
-					},
-					{
-						name: 'Save File',
-						value: 'save',
-						description: 'Download the result file',
-						action: 'Save file',
-					},
-				],
-				default: 'create',
-			},
-			{
-				displayName: 'Content Type',
-				name: 'contentType',
-				type: 'options',
-				options: [
-					{ name: 'Channel', value: 'channel' },
-					{ name: 'Channel Details', value: 'channel-details' },
-					{ name: 'Community', value: 'community' },
-					{ name: 'Community Images', value: 'community-images' },
-					{ name: 'Custom List', value: 'custom-list' },
-					{ name: 'Live', value: 'live' },
-					{ name: 'Playlist', value: 'playlist' },
-					{ name: 'Short', value: 'short' },
-					{ name: 'Video', value: 'video' },
-				],
-				default: 'video',
-				displayOptions: {
-					show: {
-						resource: ['download'],
-						operation: ['create'],
-					},
-				},
-				required: true,
-				description: 'Type of YouTube content to download comments from',
-			},
-			{
-				displayName: 'URL',
-				name: 'url',
-				type: 'string',
-				default: '',
-				displayOptions: {
-					show: {
-						resource: ['download'],
-						operation: ['create'],
-					},
-				},
-				required: true,
-				description: 'URL of the YouTube content',
-			},
-			{
-				displayName: 'Download ID',
-				name: 'downloadId',
-				type: 'string',
-				default: '',
-				displayOptions: {
-					show: {
-						resource: ['download'],
-						operation: ['get', 'save'],
-					},
-				},
-				required: true,
-				description: 'The ID of the download job',
-			},
-			{
-				displayName: 'Format',
-				name: 'format',
-				type: 'options',
-				options: [
-					{ name: 'CSV', value: 'text/csv' },
-					{ name: 'Excel', value: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
-					{ name: 'HTML', value: 'text/html' },
-					{ name: 'JSON', value: 'application/json' },
-					{ name: 'Text', value: 'text/plain' },
-					{ name: 'Zip', value: 'application/zip' },
-				],
-				default: 'application/json',
-				displayOptions: {
-					show: {
-						resource: ['download'],
-						operation: ['save'],
-					},
-				},
-				description: 'Format to download the file in',
-			},
-			{
-				displayName: 'Limit',
-				name: 'limit',
-				type: 'number',
-				default: 50,
-				typeOptions: {
-					minValue: 1,
-				},
-				displayOptions: {
-					show: {
-						resource: ['download'],
-						operation: ['getAll'],
-					},
-				},
-				description: 'Max number of results to return',
-			},
-		],
-	};
+  description: INodeTypeDescription = {
+    displayName: "YouTube Comments Downloader",
+    name: "youtubeCommentsDownloader",
+    icon: "file:youtubeCommentsDownloader.svg",
+    group: ["transform"],
+    version: 1,
+    subtitle: '={{$parameter["contentType"]}}',
+    description:
+      "Download comments from YouTube videos, shorts, channels, etc.",
+    defaults: {
+      name: "YouTube Comments Downloader",
+    },
+    inputs: ["main"],
+    outputs: ["main"],
+    usableAsTool: true,
+    credentials: [
+      {
+        name: "youtubeCommentsDownloaderApi",
+        required: true,
+      },
+    ],
+    properties: [
+      {
+        displayName: "URL",
+        name: "url",
+        type: "string",
+        default: "",
+        placeholder: "https://www.youtube.com/watch?v=...",
+        required: true,
+        description: "URL of the YouTube content",
+      },
+      {
+        displayName: "Content Type",
+        name: "contentType",
+        type: "options",
+        options: [
+          { name: "Channel", value: "channel" },
+          { name: "Community", value: "community" },
+          { name: "Custom List", value: "custom-list" },
+          { name: "Live", value: "live" },
+          { name: "Playlist", value: "playlist" },
+          { name: "Short", value: "short" },
+          { name: "Video", value: "video" },
+        ],
+        default: "video",
+        required: true,
+        description: "Type of YouTube content to download comments from",
+      },
+      {
+        displayName: "Return Format",
+        name: "returnFormat",
+        type: "options",
+        options: [
+          {
+            name: "JSON Data",
+            value: "json",
+            description: "Returns parsed comments directly in the workflow",
+          },
+          {
+            name: "File Download",
+            value: "file",
+            description: "Returns the result as a file attachment",
+          },
+        ],
+        default: "json",
+        description: "Format of the output",
+      },
+      {
+        displayName: "File Format",
+        name: "fileFormat",
+        type: "options",
+        displayOptions: {
+          show: {
+            returnFormat: ["file"],
+          },
+        },
+        options: [
+          { name: "CSV", value: "text/csv" },
+          {
+            name: "Excel",
+            value:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+          { name: "HTML", value: "text/html" },
+          { name: "JSON", value: "application/json" },
+          { name: "Text", value: "text/plain" },
+        ],
+        default: "application/json",
+        description:
+          "Format to download the file in. Note: For bulk downloads (Channel, Playlist, etc.), this determines the format of the files inside the returned ZIP archive.",
+      },
+    ],
+  }
 
-	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const items = this.getInputData();
-		const returnData: INodeExecutionData[] = [];
-		const resource = this.getNodeParameter('resource', 0) as string;
-		const operation = this.getNodeParameter('operation', 0) as string;
+  async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+    const items = this.getInputData()
+    const returnData: INodeExecutionData[] = []
+    const credentials = await this.getCredentials(
+      "youtubeCommentsDownloaderApi",
+    )
+    const apiKey = credentials.apiKey as string
+    const baseUrl = credentials.baseUrl as string
+    const ignoreSslIssues = credentials.ignoreSslIssues as boolean
 
-		const credentials = await this.getCredentials('youtubeCommentsDownloaderApi');
-		const apiKey = credentials.apiKey as string;
-		const baseUrl = credentials.baseUrl as string;
-		const ignoreSslIssues = credentials.ignoreSslIssues as boolean;
+    const limit = pLimit(5)
+    const pollInterval = 5000 // 5 seconds
 
-		for (let i = 0; i < items.length; i++) {
-			try {
-				if (resource === 'download') {
-					if (operation === 'create') {
-						const contentType = this.getNodeParameter('contentType', i) as string;
-						const url = this.getNodeParameter('url', i) as string;
+    const promises = items.map((item, i) => {
+      return limit(async () => {
+        try {
+          const url = this.getNodeParameter("url", i) as string
+          const contentType = this.getNodeParameter("contentType", i) as string
+          const returnFormat = this.getNodeParameter(
+            "returnFormat",
+            i,
+          ) as string
 
-						const body = {
-							contentType,
-							url,
-						};
+          // 1. Start Job
+          const startResponse = await this.helpers.httpRequest({
+            method: "POST",
+            baseURL: baseUrl,
+            url: "/v1/downloads",
+            body: {
+              url,
+              contentType,
+            },
+            headers: {
+              "x-api-key": apiKey,
+              "Content-Type": "application/json",
+            },
+            json: true,
+            skipSslCertificateValidation: ignoreSslIssues,
+          })
 
-						const response = await this.helpers.httpRequest({
-							method: 'POST',
-							baseURL: baseUrl,
-							url: '/v1/downloads',
-							body,
-							headers: {
-								'x-api-key': apiKey,
-								'Content-Type': 'application/json',
-							},
-							json: true,
-							skipSslCertificateValidation: ignoreSslIssues,
-						});
+          const downloadId = startResponse.id
 
-						returnData.push({ json: response });
-					} else if (operation === 'get') {
-						const downloadId = this.getNodeParameter('downloadId', i) as string;
+          // 2. Poll for Completion
+          let status = startResponse.status
+          while (["created", "downloading"].includes(status)) {
+            await sleep(pollInterval)
+            const statusResponse = await this.helpers.httpRequest({
+              method: "GET",
+              baseURL: baseUrl,
+              url: `/v1/downloads/${downloadId}`,
+              headers: {
+                "x-api-key": apiKey,
+                "Content-Type": "application/json",
+              },
+              json: true,
+              skipSslCertificateValidation: ignoreSslIssues,
+            })
+            status = statusResponse.status
 
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							baseURL: baseUrl,
-							url: `/v1/downloads/${downloadId}`,
-							headers: {
-								'x-api-key': apiKey,
-								'Content-Type': 'application/json',
-							},
-							json: true,
-							skipSslCertificateValidation: ignoreSslIssues,
-						});
+            // If status is finished or error, we stop polling and proceed to get result.
+            // Note: Even if 'error', we try to fetch whatever we can.
+            if (["finished", "error"].includes(status)) {
+              break
+            }
+          }
 
-						returnData.push({ json: response });
-					} else if (operation === 'getAll') {
-						const limit = this.getNodeParameter('limit', i) as number;
+          // 3. Retrieve Results
+          if (returnFormat === "json") {
+            const saveResponse = await this.helpers.httpRequest({
+              method: "GET",
+              baseURL: baseUrl,
+              url: `/v1/downloads/${downloadId}/save`,
+              headers: {
+                "x-api-key": apiKey,
+                Accept: "application/json",
+              },
+              encoding: "arraybuffer", // Get raw buffer to check content type
+              returnFullResponse: true,
+              skipSslCertificateValidation: ignoreSslIssues,
+            })
 
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							baseURL: baseUrl,
-							url: '/v1/downloads',
-							qs: {
-								limit,
-							},
-							headers: {
-								'x-api-key': apiKey,
-								'Content-Type': 'application/json',
-							},
-							json: true,
-							skipSslCertificateValidation: ignoreSslIssues,
-						});
+            const buffer = saveResponse.body as Buffer
+            const contentTypeHeader = saveResponse.headers["content-type"] || ""
 
-						if (response.data && Array.isArray(response.data)) {
-							response.data.forEach((item: IDataObject) => {
-								returnData.push({ json: item });
-							});
-						} else {
-							returnData.push({ json: response });
-						}
-					} else if (operation === 'save') {
-						const downloadId = this.getNodeParameter('downloadId', i) as string;
-						const format = this.getNodeParameter('format', i) as string;
+            // If it's NOT JSON (e.g. ZIP), return as binary to avoid crashing
+            if (!contentTypeHeader.includes("application/json")) {
+              const binaryData = await this.helpers.prepareBinaryData(
+                buffer,
+                `download_${downloadId}.zip`, // Assuming zip if not json for bulk, or just unknown
+                contentTypeHeader as string,
+              )
+              returnData.push({
+                json: {
+                  success: true,
+                  downloadId,
+                  url,
+                  warning:
+                    "Returned content is not JSON (likely ZIP archive). Returning as binary file.",
+                  status,
+                },
+                binary: {
+                  data: binaryData,
+                },
+                pairedItem: { item: i },
+              })
+            } else {
+              // Plain JSON
+              const jsonString = buffer.toString("utf8")
+              const jsonData = JSON.parse(jsonString)
 
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							baseURL: baseUrl,
-							url: `/v1/downloads/${downloadId}/save`,
-							headers: {
-								'x-api-key': apiKey,
-								'Accept': format,
-							},
-							encoding: 'arraybuffer',
-							json: false,
-							returnFullResponse: true,
-							skipSslCertificateValidation: ignoreSslIssues,
-						});
+              if (Array.isArray(jsonData)) {
+                jsonData.forEach((comment: IDataObject) => {
+                  returnData.push({
+                    json: comment,
+                    pairedItem: { item: i },
+                  })
+                })
+              } else {
+                returnData.push({
+                  json: jsonData,
+                  pairedItem: { item: i },
+                })
+              }
+            }
+          } else {
+            // returnFormat === 'file'
+            const fileFormat = this.getNodeParameter("fileFormat", i) as string
+            const saveResponse = await this.helpers.httpRequest({
+              method: "GET",
+              baseURL: baseUrl,
+              url: `/v1/downloads/${downloadId}/save`,
+              headers: {
+                "x-api-key": apiKey,
+                Accept: fileFormat,
+              },
+              encoding: "arraybuffer",
+              returnFullResponse: true,
+              skipSslCertificateValidation: ignoreSslIssues,
+            })
 
-						const data = response.body as Buffer;
-						const binaryData = await this.helpers.prepareBinaryData(
-							data,
-							`download_${downloadId}.${getExtension(format)}`,
-							format,
-						);
+            const data = saveResponse.body as Buffer
 
-						returnData.push({
-							json: {
-								success: true,
-								downloadId,
-							},
-							binary: {
-								data: binaryData,
-							},
-						});
-					}
-				}
-			} catch (error) {
-				if (this.continueOnFail()) {
-					returnData.push({ json: { error: error.message } });
-					continue;
-				}
-				throw error;
-			}
-		}
+            // If user asked for CSV but we got a ZIP (bulk download), extension should be .zip
+            const contentTypeHeader =
+              (saveResponse.headers["content-type"] as string) || ""
+            const isZip = contentTypeHeader.includes("zip")
 
-		return [returnData];
-	}
+            const fileName = isZip
+              ? `download_${downloadId}.zip`
+              : `download_${downloadId}.${getExtension(fileFormat)}`
+
+            const binaryData = await this.helpers.prepareBinaryData(
+              data,
+              fileName,
+              contentTypeHeader || fileFormat,
+            )
+
+            returnData.push({
+              json: {
+                success: true,
+                downloadId,
+                url,
+                status,
+              },
+              binary: {
+                data: binaryData,
+              },
+              pairedItem: { item: i },
+            })
+          }
+        } catch (error) {
+          if (this.continueOnFail()) {
+            returnData.push({
+              json: { error: error.message },
+              pairedItem: { item: i },
+            })
+            return
+          }
+          throw error
+        }
+      })
+    })
+
+    await Promise.all(promises)
+    return [returnData]
+  }
 }
 
 function getExtension(mime: string): string {
-	switch (mime) {
-		case 'application/json':
-			return 'json';
-		case 'text/csv':
-			return 'csv';
-		case 'text/html':
-			return 'html';
-		case 'text/plain':
-			return 'txt';
-		case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-			return 'xlsx';
-		case 'application/zip':
-			return 'zip';
-		default:
-			return 'bin';
-	}
+  switch (mime) {
+    case "application/json":
+      return "json"
+    case "text/csv":
+      return "csv"
+    case "text/html":
+      return "html"
+    case "text/plain":
+      return "txt"
+    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+      return "xlsx"
+    case "application/zip":
+      return "zip"
+    default:
+      return "bin"
+  }
 }
