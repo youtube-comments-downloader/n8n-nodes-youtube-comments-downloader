@@ -52,7 +52,7 @@ export class YoutubeCommentsDownloaderApi implements ICredentialType {
   test: ICredentialTestRequest = {
     request: {
       baseURL: "={{$credentials.baseUrl}}",
-      url: "/",
+      url: "/v1/user",
       method: "GET",
       headers: {
         "x-api-key": "={{$credentials.apiKey}}",
