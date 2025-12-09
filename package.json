@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-youtube-comments-downloader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Official n8n node for YouTube Comments Downloader",
   "license": "MIT",
   "homepage": "https://youtubecommentsdownloader.com",
