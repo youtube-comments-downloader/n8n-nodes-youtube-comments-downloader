@@ -34,7 +34,6 @@
       "dist/credentials/YoutubeCommentsDownloaderApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Example/Example.node.js",
       "dist/nodes/YoutubeCommentsDownloader/YoutubeCommentsDownloader.node.js"
     ]
   },

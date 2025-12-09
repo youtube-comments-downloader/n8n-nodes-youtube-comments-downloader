@@ -1,18 +1,17 @@
 # n8n-nodes-youtube-comments-downloader
 
-This is an n8n community node. It lets you use _app/service name_ in your n8n workflows.
+This is an n8n community node. It lets you use [YouTube Comments Downloader](https://youtubecommentsdownloader.com) in your n8n workflows.
 
-_App/service name_ is _one or two sentences describing the service this node integrates with_.
+The YouTube Comments Downloader node allows you to easily export comments from YouTube videos, shorts, channels, playlists, and more directly within your n8n automation pipelines.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
-[Installation](#installation)
-[Operations](#operations)
-[Credentials](#credentials)
-[Compatibility](#compatibility)
-[Usage](#usage)
+[Installation](#installation)  
+[Operations](#operations)  
+[Credentials](#credentials)  
+[Compatibility](#compatibility)  
+[Usage](#usage)  
 [Resources](#resources)
-[Version history](#version-history)
 
 ## Installation
 
@@ -20,27 +19,61 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
-_List the operations supported by your node._
+This node supports the following operations:
+
+- **Download Comments**: Fetch comments from various YouTube content types.
+  - **Content Types**:
+    - Video
+    - Short
+    - Channel
+    - Playlist
+    - Community Posts
+    - Live Streams
+    - Custom Lists
+  - **Return Formats**:
+    - **JSON Data**: Returns parsed comments directly in the workflow for further processing.
+    - **File Download**: Returns the result as a binary file attachment. Supported formats include:
+      - JSON
+      - CSV
+      - Excel (XLSX)
+      - HTML
+      - Text
+      - _Note: Bulk downloads (e.g., Channels, Playlists) may return a ZIP archive containing multiple files._
 
 ## Credentials
 
-_If users need to authenticate with the app/service, provide details here. You should include prerequisites (such as signing up with the service), available authentication methods, and how to set them up._
+You need an API Key from [YouTube Comments Downloader](https://youtubecommentsdownloader.com) to use this node.
+
+1.  Sign up or log in at [youtubecommentsdownloader.com](https://youtubecommentsdownloader.com).
+2.  Obtain your **API Key** from the dashboard.
+3.  In n8n, create a new credential for **YouTube Comments Downloader API**.
+4.  Enter your API Key.
+5.  (Optional) You can configure a custom API Base URL if needed (default is `https://api.youtubecommentsdownloader.com`).
 
 ## Compatibility
 
-_State the minimum n8n version, as well as which versions you test against. You can also include any known version incompatibility issues._
+This node works with n8n version 1.x and the 2.x beta branch.
 
 ## Usage
 
-_This is an optional section. Use it to help users with any difficult or confusing aspects of the node._
+1.  Add the **YouTube Comments Downloader** node to your workflow.
+2.  Select your credentials.
+3.  Enter the **URL** of the YouTube content you want to scrape (e.g., a video link, channel URL).
+4.  Select the **Content Type** that matches your URL (e.g., `Video`, `Channel`).
+5.  Choose your **Return Format**:
+    - Select `JSON Data` if you want to process the comments immediately in the next nodes (e.g., sentiment analysis, database insertion).
+    - Select `File Download` if you want to save the comments as a file (e.g., upload to Drive, email attachment).
+6.  If using `File Download`, select your desired **File Format** (CSV, Excel, etc.).
 
-_By the time users are looking for community nodes, they probably already know n8n basics. But if you expect new users, you can link to the [Try it out](https://docs.n8n.io/try-it-out/) documentation to help them get started._
+### Example Workflow
+
+- **Trigger**: On a schedule or manually.
+- **YouTube Comments Downloader**: Download comments from a specific video URL as JSON.
+- **Split In Batches**: Iterate over the comments.
+- **Google Sheets**: Add each comment to a spreadsheet.
 
 ## Resources
 
-* [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
-* _Link to app/service documentation._
-
-## Version history
-
-_This is another optional section. If your node has multiple versions, include a short description of available versions and what changed, as well as any compatibility impact._
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
+- [YouTube Comments Downloader Website](https://youtubecommentsdownloader.com)
+- [API Documentation](https://api.youtubecommentsdownloader.com)
