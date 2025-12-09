@@ -15,7 +15,14 @@ The YouTube Comments Downloader node allows you to easily export comments from Y
 
 ## Installation
 
-Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
+To install this node in your n8n instance:
+
+1.  Go to **Settings** > **Community Nodes**.
+2.  Click **Install**.
+3.  Paste the package name: `n8n-nodes-youtube-comments-downloader`
+4.  Click **Install** again.
+
+For more detailed instructions or troubleshooting, refer to the [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/installation/).
 
 ## Operations
 

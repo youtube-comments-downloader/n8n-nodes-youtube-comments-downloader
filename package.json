@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/igloczek/n8n-nodes-youtube-comments-downloader.git"
+    "url": "https://github.com/youtube-comments-downloader/n8n-nodes-youtube-comments-downloader.git"
   },
   "scripts": {
     "build": "n8n-node build",
@@ -47,8 +47,5 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
-  },
-  "dependencies": {
-    "p-limit": "^7.2.0"
   }
 }

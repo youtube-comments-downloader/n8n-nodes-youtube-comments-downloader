@@ -1,4 +1,4 @@
-import pLimit from "p-limit"
+import pLimit from "../../dependecies/p-limit"
 import { sleep } from "n8n-workflow"
 
 import type {
