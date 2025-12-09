@@ -231,10 +231,14 @@ export class YoutubeCommentsDownloader implements INodeType {
           } else {
             // returnFormat === 'file'
             const fileFormat = this.getNodeParameter("fileFormat", i) as string
+            const fileExtension = getExtension(fileFormat)
             const saveResponse = await this.helpers.httpRequest({
               method: "GET",
               baseURL: baseUrl,
               url: `/v1/downloads/${downloadId}/save`,
+              qs: {
+                format: fileExtension,
+              },
               headers: {
                 "x-api-key": apiKey,
                 Accept: fileFormat,
@@ -253,7 +257,7 @@ export class YoutubeCommentsDownloader implements INodeType {
 
             const fileName = isZip
               ? `download_${downloadId}.zip`
-              : `download_${downloadId}.${getExtension(fileFormat)}`
+              : `download_${downloadId}.${fileExtension}`
 
             const binaryData = await this.helpers.prepareBinaryData(
               data,
