@@ -1,5 +1,5 @@
 import pLimit from "../../dependecies/p-limit"
-import { sleep } from "n8n-workflow"
+import { NodeOperationError, sleep } from "n8n-workflow"
 
 import type {
   IDataObject,
@@ -148,9 +148,11 @@ export class YoutubeCommentsDownloader implements INodeType {
 
           // 2. Poll for Completion
           let status = startResponse.status
+          let statusResponse = startResponse
+
           while (["created", "downloading"].includes(status)) {
             await sleep(pollInterval)
-            const statusResponse = await this.helpers.httpRequest({
+            statusResponse = await this.helpers.httpRequest({
               method: "GET",
               baseURL: baseUrl,
               url: `/v1/downloads/${downloadId}`,
@@ -163,11 +165,17 @@ export class YoutubeCommentsDownloader implements INodeType {
             })
             status = statusResponse.status
 
-            // If status is finished or error, we stop polling and proceed to get result.
-            // Note: Even if 'error', we try to fetch whatever we can.
-            if (["finished", "error"].includes(status)) {
+            if (["finished", "error", "canceled"].includes(status)) {
               break
             }
+          }
+
+          if (status === "error" || status === "canceled") {
+            throw new NodeOperationError(
+              this.getNode(),
+              getDownloadErrorMessage(statusResponse, downloadId),
+              { itemIndex: i },
+            )
           }
 
           // 3. Retrieve Results
@@ -313,4 +321,23 @@ function getExtension(mime: string): string {
     default:
       return "bin"
   }
+}
+
+function getDownloadErrorMessage(
+  response: IDataObject,
+  downloadId: string,
+): string {
+  const error = response.error as IDataObject | undefined
+  const errorMessage = error?.message
+
+  if (typeof errorMessage === "string" && errorMessage.length > 0) {
+    return errorMessage
+  }
+
+  const status = response.status
+  if (status === "canceled") {
+    return `Download was canceled (ID: ${downloadId})`
+  }
+
+  return `Download failed (ID: ${downloadId})`
 }
