@@ -21,7 +21,8 @@
     "dev": "n8n-node dev",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
-    "release": "n8n-node release",
+    "release": "release-it --config .release-it.json",
+    "release:notes": "node scripts/generate-release-notes.mjs",
     "prepublishOnly": "n8n-node prerelease"
   },
   "files": [
