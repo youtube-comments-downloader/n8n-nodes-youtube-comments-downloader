@@ -1,5 +1,10 @@
-import pLimit from "../../dependecies/p-limit"
-import { NodeOperationError, sleep } from "n8n-workflow"
+import {
+  NodeApiError,
+  NodeConnectionTypes,
+  NodeOperationError,
+  sleep,
+} from "n8n-workflow"
+import { limiter } from "./utils/limiter"
 
 import type {
   IDataObject,
@@ -7,6 +12,7 @@ import type {
   INodeExecutionData,
   INodeType,
   INodeTypeDescription,
+  JsonObject,
 } from "n8n-workflow"
 
 export class YoutubeCommentsDownloader implements INodeType {
@@ -22,8 +28,8 @@ export class YoutubeCommentsDownloader implements INodeType {
     defaults: {
       name: "YouTube Comments Downloader",
     },
-    inputs: ["main"],
-    outputs: ["main"],
+    inputs: [NodeConnectionTypes.Main],
+    outputs: [NodeConnectionTypes.Main],
     usableAsTool: true,
     credentials: [
       {
@@ -110,15 +116,14 @@ export class YoutubeCommentsDownloader implements INodeType {
     const credentials = await this.getCredentials(
       "youtubeCommentsDownloaderApi",
     )
-    const apiKey = credentials.apiKey as string
     const baseUrl = credentials.baseUrl as string
     const ignoreSslIssues = credentials.ignoreSslIssues as boolean
 
-    const limit = pLimit(5)
-    const pollInterval = 5000 // 5 seconds
+    const limitTask = limiter(5)
+    const pollInterval = 5000
 
-    const promises = items.map((item, i) => {
-      return limit(async () => {
+    const operations = items.map((_, i) =>
+      limitTask(async () => {
         try {
           const url = this.getNodeParameter("url", i) as string
           const contentType = this.getNodeParameter("contentType", i) as string
@@ -127,8 +132,7 @@ export class YoutubeCommentsDownloader implements INodeType {
             i,
           ) as string
 
-          // 1. Start Job
-          const startResponse = await this.helpers.httpRequest({
+          const startResponse = (await apiRequest.call(this, {
             method: "POST",
             baseURL: baseUrl,
             url: "/v1/downloads",
@@ -137,32 +141,28 @@ export class YoutubeCommentsDownloader implements INodeType {
               contentType,
             },
             headers: {
-              "x-api-key": apiKey,
               "Content-Type": "application/json",
             },
             json: true,
             skipSslCertificateValidation: ignoreSslIssues,
-          })
+          })) as DownloadJobResponse
 
           const downloadId = startResponse.id
-
-          // 2. Poll for Completion
           let status = startResponse.status
           let statusResponse = startResponse
 
           while (["created", "downloading"].includes(status)) {
             await sleep(pollInterval)
-            statusResponse = await this.helpers.httpRequest({
+            statusResponse = (await apiRequest.call(this, {
               method: "GET",
               baseURL: baseUrl,
               url: `/v1/downloads/${downloadId}`,
               headers: {
-                "x-api-key": apiKey,
                 "Content-Type": "application/json",
               },
               json: true,
               skipSslCertificateValidation: ignoreSslIssues,
-            })
+            })) as DownloadJobResponse
             status = statusResponse.status
 
             if (["finished", "error", "canceled"].includes(status)) {
@@ -178,30 +178,27 @@ export class YoutubeCommentsDownloader implements INodeType {
             )
           }
 
-          // 3. Retrieve Results
           if (returnFormat === "json") {
-            const saveResponse = await this.helpers.httpRequest({
+            const saveResponse = (await apiRequest.call(this, {
               method: "GET",
               baseURL: baseUrl,
               url: `/v1/downloads/${downloadId}/save`,
               headers: {
-                "x-api-key": apiKey,
                 Accept: "application/json",
               },
-              encoding: "arraybuffer", // Get raw buffer to check content type
+              encoding: "arraybuffer",
               returnFullResponse: true,
               skipSslCertificateValidation: ignoreSslIssues,
-            })
+            })) as BinaryHttpResponse
 
-            const buffer = saveResponse.body as Buffer
-            const contentTypeHeader = saveResponse.headers["content-type"] || ""
+            const buffer = saveResponse.body
+            const contentTypeHeader = getContentTypeHeader(saveResponse.headers)
 
-            // If it's NOT JSON (e.g. ZIP), return as binary to avoid crashing
             if (!contentTypeHeader.includes("application/json")) {
               const binaryData = await this.helpers.prepareBinaryData(
                 buffer,
-                `download_${downloadId}.zip`, // Assuming zip if not json for bulk, or just unknown
-                contentTypeHeader as string,
+                `download_${downloadId}.zip`,
+                contentTypeHeader,
               )
               returnData.push({
                 json: {
@@ -218,7 +215,6 @@ export class YoutubeCommentsDownloader implements INodeType {
                 pairedItem: { item: i },
               })
             } else {
-              // Plain JSON
               const jsonString = buffer.toString("utf8")
               const jsonData = JSON.parse(jsonString)
 
@@ -231,16 +227,15 @@ export class YoutubeCommentsDownloader implements INodeType {
                 })
               } else {
                 returnData.push({
-                  json: jsonData,
+                  json: jsonData as IDataObject,
                   pairedItem: { item: i },
                 })
               }
             }
           } else {
-            // returnFormat === 'file'
             const fileFormat = this.getNodeParameter("fileFormat", i) as string
             const fileExtension = getExtension(fileFormat)
-            const saveResponse = await this.helpers.httpRequest({
+            const saveResponse = (await apiRequest.call(this, {
               method: "GET",
               baseURL: baseUrl,
               url: `/v1/downloads/${downloadId}/save`,
@@ -248,27 +243,21 @@ export class YoutubeCommentsDownloader implements INodeType {
                 format: fileExtension,
               },
               headers: {
-                "x-api-key": apiKey,
                 Accept: fileFormat,
               },
               encoding: "arraybuffer",
               returnFullResponse: true,
               skipSslCertificateValidation: ignoreSslIssues,
-            })
+            })) as BinaryHttpResponse
 
-            const data = saveResponse.body as Buffer
-
-            // If user asked for CSV but we got a ZIP (bulk download), extension should be .zip
-            const contentTypeHeader =
-              (saveResponse.headers["content-type"] as string) || ""
+            const contentTypeHeader = getContentTypeHeader(saveResponse.headers)
             const isZip = contentTypeHeader.includes("zip")
-
             const fileName = isZip
               ? `download_${downloadId}.zip`
               : `download_${downloadId}.${fileExtension}`
 
             const binaryData = await this.helpers.prepareBinaryData(
-              data,
+              saveResponse.body,
               fileName,
               contentTypeHeader || fileFormat,
             )
@@ -294,14 +283,58 @@ export class YoutubeCommentsDownloader implements INodeType {
             })
             return
           }
+
           throw error
         }
-      })
-    })
+      }),
+    )
 
-    await Promise.all(promises)
+    await Promise.all(operations)
+
     return [returnData]
   }
+}
+
+type DownloadJobResponse = IDataObject & {
+  id: string
+  status: string
+}
+
+type BinaryHttpResponse = {
+  body: Buffer
+  headers: IDataObject
+}
+
+type ApiRequestOptions = {
+  method: "GET" | "POST"
+  baseURL: string
+  url: string
+  body?: IDataObject
+  qs?: IDataObject
+  headers?: IDataObject
+  json?: boolean
+  encoding?: "arraybuffer"
+  returnFullResponse?: boolean
+  skipSslCertificateValidation: boolean
+}
+
+async function apiRequest<T>(
+  this: IExecuteFunctions,
+  options: ApiRequestOptions,
+): Promise<T> {
+  try {
+    return await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "youtubeCommentsDownloaderApi",
+      options,
+    )
+  } catch (error) {
+    throw new NodeApiError(this.getNode(), error as JsonObject)
+  }
+}
+
+function getContentTypeHeader(headers: IDataObject): string {
+  return (headers["content-type"] as string) || ""
 }
 
 function getExtension(mime: string): string {

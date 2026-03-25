@@ -29,16 +29,12 @@ export class YoutubeCommentsDownloaderApi implements ICredentialType {
       placeholder: "https://api.youtubecommentsdownloader.com",
     },
     {
-      displayName: "Allow Unauthorized Certificates",
+      displayName: "Allow Unauthorized TLS/SSL Certificates",
       name: "ignoreSslIssues",
       type: "boolean",
       default: false,
-      description: "Whether to allow self-signed certificates",
-      displayOptions: {
-        show: {
-          baseUrl: ["https://api.ycd.test"],
-        },
-      },
+      description:
+        "Only enable this for custom API endpoints that use self-signed or otherwise untrusted certificates.",
     },
   ]
   authenticate: IAuthenticateGeneric = {

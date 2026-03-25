@@ -56,6 +56,7 @@ You need an API Key from [YouTube Comments Downloader](https://youtubecommentsdo
 3.  In n8n, create a new credential for **YouTube Comments Downloader API**.
 4.  Enter your API Key.
 5.  (Optional) You can configure a custom API Base URL if needed (default is `https://api.youtubecommentsdownloader.com`).
+6.  (Optional) If your custom API endpoint uses a self-signed or otherwise untrusted certificate, enable **Allow Unauthorized TLS/SSL Certificates** for that credential.
 
 ## Compatibility
 
