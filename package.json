@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-youtube-comments-downloader",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Official n8n node for YouTube Comments Downloader",
   "license": "MIT",
   "homepage": "https://youtubecommentsdownloader.com",
@@ -20,10 +20,7 @@
     "build:watch": "tsc --watch",
     "dev": "n8n-node dev",
     "lint": "n8n-node lint",
-    "lint:fix": "n8n-node lint --fix",
-    "release": "release-it --config .release-it.json",
-    "release:notes": "node scripts/generate-release-notes.mjs",
-    "prepublishOnly": "n8n-node prerelease"
+    "lint:fix": "n8n-node lint --fix"
   },
   "files": [
     "dist"
@@ -43,7 +40,6 @@
     "@types/node": "^24.10.1",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
-    "release-it": "^19.0.4",
     "typescript": "5.9.2"
   },
   "peerDependencies": {
