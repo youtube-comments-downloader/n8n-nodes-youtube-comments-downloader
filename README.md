@@ -35,8 +35,10 @@ This node supports the following operations:
     - Channel
     - Playlist
     - Community Posts
-    - Live Streams
+    - Live Chat (chat replay of a live stream)
+    - Live Comments (regular comments on a past live stream)
     - Custom Lists
+  - **Items Type** (Channel, Playlist, Custom List): Videos, Shorts, Community Posts (Channel only), Live Chat, or Live Comments.
   - **Return Formats**:
     - **JSON Data**: Returns parsed comments directly in the workflow for further processing.
     - **File Download**: Returns the result as a binary file attachment. Supported formats include:
@@ -68,6 +70,8 @@ This node works with n8n version 1.x and the 2.x beta branch.
 2.  Select your credentials.
 3.  Enter the **URL** of the YouTube content you want to scrape (e.g., a video link, channel URL).
 4.  Select the **Content Type** that matches your URL (e.g., `Video`, `Channel`).
+    - For live streams, pick `Live Chat` to get the chat replay or `Live Comments` to get the regular comments posted under the stream.
+    - For `Channel`, `Playlist`, and `Custom List`, also pick the **Items Type** to download (e.g., `Videos`, `Live Chat`, `Live Comments`).
 5.  Choose your **Return Format**:
     - Select `JSON Data` if you want to process the comments immediately in the next nodes (e.g., sentiment analysis, database insertion).
     - Select `File Download` if you want to save the comments as a file (e.g., upload to Drive, email attachment).

@@ -55,7 +55,16 @@ export class YoutubeCommentsDownloader implements INodeType {
           { name: "Channel", value: "channel" },
           { name: "Community", value: "community" },
           { name: "Custom List", value: "custom-list" },
-          { name: "Live", value: "live" },
+          {
+            name: "Live Chat",
+            value: "live",
+            description: "Chat replay of a live stream",
+          },
+          {
+            name: "Live Comments",
+            value: "live-comments",
+            description: "Regular comments on a past live stream",
+          },
           { name: "Playlist", value: "playlist" },
           { name: "Short", value: "short" },
           { name: "Video", value: "video" },
@@ -63,6 +72,61 @@ export class YoutubeCommentsDownloader implements INodeType {
         default: "video",
         required: true,
         description: "Type of YouTube content to download comments from",
+      },
+      {
+        displayName: "Items Type",
+        name: "itemsType",
+        type: "options",
+        displayOptions: {
+          show: {
+            contentType: ["channel"],
+          },
+        },
+        options: [
+          { name: "Community Posts", value: "community" },
+          {
+            name: "Live Chat",
+            value: "live-chat",
+            description: "Chat replays of live streams",
+          },
+          {
+            name: "Live Comments",
+            value: "live-comments",
+            description: "Regular comments on past live streams",
+          },
+          { name: "Shorts", value: "short" },
+          { name: "Videos", value: "video" },
+        ],
+        default: "video",
+        required: true,
+        description: "Which items of the channel to download comments from",
+      },
+      {
+        displayName: "Items Type",
+        name: "itemsType",
+        type: "options",
+        displayOptions: {
+          show: {
+            contentType: ["playlist", "custom-list"],
+          },
+        },
+        options: [
+          {
+            name: "Live Chat",
+            value: "live-chat",
+            description: "Chat replays of live streams",
+          },
+          {
+            name: "Live Comments",
+            value: "live-comments",
+            description: "Regular comments on past live streams",
+          },
+          { name: "Shorts", value: "short" },
+          { name: "Videos", value: "video" },
+        ],
+        default: "video",
+        required: true,
+        description: "Which items of the list to download comments from",
       },
       {
         displayName: "Return Format",
@@ -131,6 +195,9 @@ export class YoutubeCommentsDownloader implements INodeType {
             "returnFormat",
             i,
           ) as string
+          const itemsType = BULK_CONTENT_TYPES.includes(contentType)
+            ? (this.getNodeParameter("itemsType", i) as string)
+            : undefined
 
           const startResponse = (await apiRequest.call(this, {
             method: "POST",
@@ -138,7 +205,8 @@ export class YoutubeCommentsDownloader implements INodeType {
             url: "/v1/downloads",
             body: {
               url,
-              contentType,
+              contentType: getApiContentType(contentType),
+              ...(itemsType ? { itemsType } : {}),
             },
             headers: {
               "Content-Type": "application/json",
@@ -295,6 +363,8 @@ export class YoutubeCommentsDownloader implements INodeType {
   }
 }
 
+const BULK_CONTENT_TYPES = ["channel", "playlist", "custom-list"]
+
 type DownloadJobResponse = IDataObject & {
   id: string
   status: string
@@ -331,6 +401,12 @@ async function apiRequest<T>(
   } catch (error) {
     throw new NodeApiError(this.getNode(), error as JsonObject)
   }
+}
+
+// The API fetches regular comments on a live stream through the "video"
+// content type, while "live" fetches the chat replay.
+function getApiContentType(contentType: string): string {
+  return contentType === "live-comments" ? "video" : contentType
 }
 
 function getContentTypeHeader(headers: IDataObject): string {
