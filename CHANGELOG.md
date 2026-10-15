@@ -2,7 +2,16 @@
 
 This file tracks meaningful changes to the n8n YouTube Comments Downloader node.
 
-## Unreleased
+## 1.1.0 - 2026-10-15
+
+### Added
+- Added a **Live Comments** content type for regular comments on a past live stream. The existing live option is now labeled **Live Chat** (chat replay).
+- Added an **Items Type** option for Channel, Playlist, and Custom List downloads, including **Live Chat** and **Live Comments**.
+
+### Fixed
+- Channel, Playlist, and Custom List downloads now send the `itemsType` the API requires.
+
+## 1.0.5 - 2026-03-25
 
 ### Changed
 - Reworked the node internals to match n8n verification expectations more closely.
